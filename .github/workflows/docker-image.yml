@@ -1,18 +1,30 @@
-name: Docker Image CI
+name: Create & Push Docker Image
 
+# This workflow runs when any of the following occur:
+# - A push is made to a branch called `main` 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+env:
+  IMAGE_NAME: hermes-main-website
 
 jobs:
-
-  build:
-
+  push:
     runs-on: ubuntu-latest
-
+    permissions:
+      packages: write
+      contents: read
     steps:
-    - uses: actions/checkout@v3
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag hermes-main-website:$(date +%s) --tag hermes-main-website:latest
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
+      - name: Log in to registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+      - name: Push image
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+          echo IMAGE_ID=$IMAGE_ID
+          docker tag $IMAGE_NAME $IMAGE_ID:${{ github.run_number }}
+          docker tag $IMAGE_NAME $IMAGE_ID:latest
+          docker push $IMAGE_ID --all-tags
